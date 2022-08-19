@@ -1,8 +1,11 @@
+use std::cmp::min;
 use std::io::Write; // access flush()
 
 use rand::Rng; // access gen()
 use solana_sdk::instruction::AccountMeta;
 use solana_sdk::signature::Signer; // To access pubkey from keypair.
+
+const BUF_SIZ: usize = 78;
 
 fn keys_gen() -> solana_sdk::signature::Keypair {
     let seed = rand::thread_rng().gen::<[u8; 32]>();
@@ -49,9 +52,35 @@ fn airdrop(
     eprintln!("airdrop done");
 }
 
+fn account_create(
+    client: &solana_client::rpc_client::RpcClient,
+    payer_keys: &solana_sdk::signer::keypair::Keypair,
+    account_keys: &solana_sdk::signer::keypair::Keypair,
+    account_owner: &solana_sdk::pubkey::Pubkey, // Who has write access?
+    account_data_len: usize, // How much buffer space to allocate?
+) {
+    let ix = solana_program::system_instruction::create_account(
+        &payer_keys.pubkey(),
+        &account_keys.pubkey(),
+        client
+            .get_minimum_balance_for_rent_exemption(account_data_len)
+            .unwrap(),
+        account_data_len as u64,
+        account_owner,
+    );
+    let signers = [payer_keys, account_keys];
+    let tx = solana_sdk::transaction::Transaction::new(
+        &signers,
+        solana_sdk::message::Message::new(&[ix], Some(&payer_keys.pubkey())),
+        client.get_latest_blockhash().unwrap(),
+    );
+    let _ = client.send_and_confirm_transaction(&tx).unwrap();
+}
+
 fn echo_loop(
     client: &solana_client::rpc_client::RpcClient,
     program_id: solana_sdk::pubkey::Pubkey,
+    buf_out_id: solana_sdk::pubkey::Pubkey,
     payer_keys: &solana_sdk::signer::keypair::Keypair,
 ) {
     let payer_id = payer_keys.pubkey();
@@ -59,50 +88,37 @@ fn echo_loop(
     let mut stdout = std::io::stdout();
     let stdin = std::io::stdin();
 
+    let mut buf: [u8; BUF_SIZ] = [0; BUF_SIZ];
+
     loop {
         print!("> ");
         stdout.flush().unwrap();
         stdin.read_line(&mut buf_in).unwrap();
+        buf_in = buf_in.trim_end_matches('\n').to_string();
         let buf_in_len = buf_in.as_bytes().len();
-        let buf_out_keys = keys_gen();
-        let buf_out_id = buf_out_keys.pubkey();
-        let ix_allocate_buf_out =
-            // An account data length cannot be altered once created, so we
-            // create a fresh one to accomodate arbitrary length input from the
-            // user.
-            solana_program::system_instruction::create_account(
-                // Buffer account, which:
-                // - program writes to;
-                // - client reads from.
-                &payer_id,
-                &buf_out_id,
-                client
-                    .get_minimum_balance_for_rent_exemption(buf_in_len)
-                    .unwrap(),
-                buf_in_len as u64,
-                &program_id,
-            );
+        let upto = min(buf_in_len, BUF_SIZ);
+        buf[..upto].copy_from_slice(&buf_in.as_bytes()[..upto]);
         let ix_echo = solana_sdk::instruction::Instruction::new_with_bytes(
             program_id,
-            buf_in.as_bytes(),
+            &buf,
             vec![{
                 // buf_out doesn't have to sign.
                 let is_signer = false;
                 AccountMeta::new(buf_out_id, is_signer)
             }],
         );
-        let ixs = [ix_allocate_buf_out, ix_echo];
         let tx = solana_sdk::transaction::Transaction::new(
-            &[payer_keys, &buf_out_keys],
-            solana_sdk::message::Message::new(&ixs, Some(&payer_id)),
+            &[payer_keys],
+            solana_sdk::message::Message::new(&[ix_echo], Some(&payer_id)),
             client.get_latest_blockhash().unwrap(),
         );
         let sig = client.send_and_confirm_transaction(&tx).unwrap();
         let buf_out = client.get_account(&buf_out_id).unwrap().data;
-        print!("< {}", std::str::from_utf8(&buf_out).unwrap());
-        stdout.flush().unwrap();
+        println!("< {}", std::str::from_utf8(&buf_out).unwrap());
         eprintln!(": {}", sig);
+
         buf_in.clear();
+        buf.fill(0);
     }
 }
 
@@ -137,5 +153,10 @@ fn main() {
         airdrop(&client, &payer_keys.pubkey(), lamports);
     }
 
-    echo_loop(&client, program_id, &payer_keys);
+    let buf_out_keys = keys_gen();
+    eprintln!("buffer account creating");
+    account_create(&client, &payer_keys, &buf_out_keys, &program_id, BUF_SIZ);
+    eprintln!("buffer account done");
+
+    echo_loop(&client, program_id, buf_out_keys.pubkey(), &payer_keys);
 }

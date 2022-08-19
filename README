@@ -1,22 +1,8 @@
-solana echo
-===========
+solana echo fixed
+=================
 
-In hello-world[1], the program simply logs that it has received something from
-the client, but does nothing else, for any instruction data whatsoever.
-
-ping-pong[2] escalates the complexity to program parsing the client request and
-writing a response into the client-provided buffer account, which the client
-proceeds to read.
-
-Here, in echo, we both simplify from ping-pong and escalate complexity from
-both ping-pong and hello-world in a different way. Like in hello-world, we pass
-raw, unserialized data from client to program.  But unlike hello-world and like
-ping-pong, the program also writes data to a buffer account, from which client
-then reads.
-
-However, unlike either, the buffer account is freshly allocated for each
-clint<->program exchange, in order to support arbitrary-length input from the
-user (since an account's data length cannot be changed once allocated).
+Like echo-dyn[1], but using a single, fixed-size buffer account, instead of
+allocating new ones dynamically.
 
 If all goes well, your interactive session would look something like this:
 
@@ -34,8 +20,7 @@ If all goes well, your interactive session would look something like this:
     : 2hvDgarxgpGtYGdmm9vCjBjrGhjbtr2Q86PwwUEHmdYi53Rit3jfEEnrHvkzqwxKd1L5U9Egv5iZDF7s9pibaF77
     >
 
-[1]: https://github.com/xandkar/solana-hello-world
-[2]: https://github.com/xandkar/solana-ping-pong
+[1]: https://github.com/xandkar/solana-echo-dyn
 
 build
 -----
