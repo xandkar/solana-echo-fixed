@@ -1,35 +1,41 @@
-solana ping pong
-================
+solana echo
+===========
 
 In hello-world[1], the program simply logs that it has received something from
 the client, but does nothing else, for any instruction data whatsoever.
 
-Here is a slight escalation in complexity, where the program reads the
-specifics of the client request and writes a response into the client-provided
-buffer account, which the client proceeds to read.
+ping-pong[2] escalates the complexity to program parsing the client request and
+writing a response into the client-provided buffer account, which the client
+proceeds to read.
 
-Client sends a ping and the program responds with a pong, ad infinitum.
+Here, in echo, we both simplify from ping-pong and escalate complexity from
+both ping-pong and hello-world in a different way. Like in hello-world, we pass
+raw, unserialized data from client to program.  But unlike hello-world and like
+ping-pong, the program also writes data to a buffer account, from which client
+then reads.
 
-If all goes well, you should see output like this:
+However, unlike either, the buffer account is freshly allocated for each
+clint<->program exchange, in order to support arbitrary-length input from the
+user (since an account's data length cannot be changed once allocated).
+
+If all goes well, your interactive session would look something like this:
 
     airdrop requesting.
     airdrop confirming .....
     airdrop done
-    buffer account creating
-    buffer account done
-    Ping(0) > < Pong(1)
-    Ping(2) > < Pong(3)
-    Ping(4) > < Pong(5)
-    Ping(6) > < Pong(7)
-    Ping(8) > < Pong(9)
-    Ping(10) > < Pong(11)
-    Ping(12) > < Pong(13)
-    Ping(14) > < Pong(15)
-    Ping(16) > < Pong(17)
-    Ping(18) > < Pong(19)
-    ...
+    > hi
+    < hi
+    : 61UH7E6V8paqMryHuthhNX64FhnsyZyyE3gda75AUMpryxX7MxfedKz3xqxUiW3t1pAogs4G7XcixfYV6Rc6c5LA
+    > foo bar baz qux quux
+    < foo bar baz qux quux
+    : 5bPPAoJkcTEtXdu2qKybsCjNJ5BefEtehhB6nkzT2Z8Bqo4iGhbrew4GqPxwAzhAApSUB1EaMfoLajJ7zSYwSo67
+    > - "Do you like apples?"
+    < - "Do you like apples?"
+    : 2hvDgarxgpGtYGdmm9vCjBjrGhjbtr2Q86PwwUEHmdYi53Rit3jfEEnrHvkzqwxKd1L5U9Egv5iZDF7s9pibaF77
+    >
 
-[1]: https://github.com/xandkar/solana-hello-world/
+[1]: https://github.com/xandkar/solana-hello-world
+[2]: https://github.com/xandkar/solana-ping-pong
 
 build
 -----

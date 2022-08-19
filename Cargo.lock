@@ -553,8 +553,6 @@ dependencies = [
 name = "client"
 version = "0.0.0"
 dependencies = [
- "borsh",
- "protocol",
  "rand 0.8.5",
  "solana-client",
  "solana-program",
@@ -2154,16 +2152,7 @@ dependencies = [
 name = "program"
 version = "0.0.0"
 dependencies = [
- "borsh",
- "protocol",
  "solana-program",
-]
-
-[[package]]
-name = "protocol"
-version = "0.0.0"
-dependencies = [
- "borsh",
 ]
 
 [[package]]

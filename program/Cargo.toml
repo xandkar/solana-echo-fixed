@@ -4,8 +4,6 @@ version = "0.0.0"
 edition = "2021"
 
 [dependencies]
-protocol = {path = "../protocol"}
-borsh = "0.9"
 solana-program = "=1.11.5"
 
 [lib]
